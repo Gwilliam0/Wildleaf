@@ -1,5 +1,6 @@
 import './map.css'
 import { useState, useEffect } from 'react';
+import Map_Result from '../map_result_component/map_result';
 
 // Importing Leaflet
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
@@ -7,7 +8,8 @@ import 'leaflet/dist/leaflet.css';
 
 function Map(props) {
 
-    const [regions, setRegions] = useState(null);
+    const [ regions, setRegions ] = useState(null);
+    const [ displayResults, setDisplayResults ] = useState(false);
 
     // fetch the data for the regions
     useEffect(() => {
@@ -21,6 +23,7 @@ function Map(props) {
         layer.on({
             click: () => {
                 console.log(`You clicked on : ${region.properties.name}`);
+                setDisplayResults(true)
             }
         });
     };
@@ -33,6 +36,7 @@ function Map(props) {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 {regions && <GeoJSON data={regions} onEachFeature={handleClickRegion} />}
+                {displayResults && <Map_Result/>}
             </MapContainer>
         </>
     )
