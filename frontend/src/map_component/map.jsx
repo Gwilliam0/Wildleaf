@@ -1,45 +1,71 @@
 import './map.css'
 import { useState, useEffect } from 'react';
 import Map_Result from '../map_result_component/map_result';
-
-// Importing Leaflet
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css';
 
+import FitBounds from './fit_bounds.jsx';
+
 function Map(props) {
+    const [regions, setRegions] = useState(null);
+    const [displayResults, setDisplayResults] = useState(false);
+    const [error, setError] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const [ regions, setRegions ] = useState(null);
-    const [ displayResults, setDisplayResults ] = useState(false);
+    const fetchRegionsData = () => {
+        setLoading(true);    // loading state
+        setError(false);     // error catching
 
-    // fetch the data for the regions
-    useEffect(() => {
         fetch('/spain_regions.geojson')
-        .then(res => res.json())
-        .then(data => setRegions(data));
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`.map: HTTP error -- status: ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                setRegions(data);   // grabbing spain
+            })
+            .catch(err => {
+                console.error('.map: Failed to load regions:', err);
+                setError(true);     // show error state
+            })
+            .finally(() => {
+                setLoading(false);  // stop loading completely
+            });
+    };
+
+    useEffect(() => {
+        fetchRegionsData();
     }, []);
 
-    // function to handle the click on the regions
     const handleClickRegion = (region, layer) => {
         layer.on({
             click: () => {
-                console.log(`You clicked on : ${region.properties.name}`);
-                setDisplayResults(true)
+                console.log(`You clicked on: ${region.properties.name}`);
+                setDisplayResults(true);
             }
         });
     };
 
+    if (loading) return <div>Loading map…</div>;
+    if (error) return <div>Failed to load regions. Try again later.</div>;
+
     return (
-        <>
-            <MapContainer center={[40.4168, -3.7038]} zoom={7}>
-                <TileLayer
-                    attribution='&copy; OpenStreetMap contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {regions && <GeoJSON data={regions} onEachFeature={handleClickRegion} />}
-                {displayResults && <Map_Result/>}
-            </MapContainer>
-        </>
-    )
+        <MapContainer center={[40.4168, -3.7038]} zoom={6}>
+            <TileLayer
+                attribution='&copy; OpenStreetMap contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {regions && (
+              <>
+                <GeoJSON data={regions} onEachFeature={handleClickRegion} />
+                <FitBounds geoJson={regions}/>
+              </>
+            )}
+            {displayResults && <Map_Result />}
+        </MapContainer>
+    );
 }
 
-export default Map
+export default Map;
